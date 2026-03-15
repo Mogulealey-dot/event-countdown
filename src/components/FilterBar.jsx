@@ -7,7 +7,7 @@ const SORT_OPTIONS = [
   { value: 'created', label: 'Date added' },
 ];
 
-export default function FilterBar({ filter, setFilter, sort, setSort, view, setView, events }) {
+export default function FilterBar({ filter, setFilter, sort, setSort, view, setView, events, search, setSearch }) {
   const categoryCounts = CATEGORIES.reduce((acc, cat) => {
     acc[cat.id] = events.filter(e => e.category === cat.id).length;
     return acc;
@@ -17,6 +17,28 @@ export default function FilterBar({ filter, setFilter, sort, setSort, view, setV
 
   return (
     <div className="filter-bar">
+      {/* Search input */}
+      <div className="search-wrap">
+        <span className="search-icon">🔍</span>
+        <input
+          className="search-input"
+          type="text"
+          placeholder="Search events…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          aria-label="Search events"
+        />
+        {search && (
+          <button
+            className="search-clear"
+            onClick={() => setSearch('')}
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
       <div className="filter-chips">
         <button
           className={`filter-chip${filter === 'all' ? ' active' : ''}`}

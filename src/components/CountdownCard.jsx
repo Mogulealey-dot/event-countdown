@@ -1,24 +1,45 @@
 import { useState, useEffect } from 'react';
-import { getTimeLeft, formatDate, getCategoryColor } from '../App';
+import { getTimeLeft, formatDate, getCategoryColor, getMilestone } from '../App';
 
-export default function CountdownCard({ event, onEdit, onDelete, onPin, onShare }) {
+export default function CountdownCard({
+  event, onEdit, onDelete, onPin, onShare, onEmbed, onConfetti,
+  onDragStart, onDragEnter, onDragEnd,
+}) {
   const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(event.date));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft(getTimeLeft(event.date));
+      const tl = getTimeLeft(event.date);
+      setTimeLeft(tl);
+      if (tl.expired) onConfetti?.(event.id);
     }, 1000);
     return () => clearInterval(interval);
-  }, [event.date]);
+  }, [event.date, event.id, onConfetti]);
+
+  // Trigger confetti once if already expired on mount
+  useEffect(() => {
+    const tl = getTimeLeft(event.date);
+    if (tl.expired) onConfetti?.(event.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const accentColor = event.color || getCategoryColor(event.category);
+  const milestone = getMilestone(timeLeft);
+  const cat = event.category;
 
   function pad(n) {
     return String(n).padStart(2, '0');
   }
 
   return (
-    <div className="countdown-card">
+    <div
+      className={`countdown-card card-theme-${cat.toLowerCase()}`}
+      draggable
+      onDragStart={() => onDragStart?.(event.id)}
+      onDragEnter={() => onDragEnter?.(event.id)}
+      onDragEnd={onDragEnd}
+      onDragOver={e => e.preventDefault()}
+    >
       <div className="card-top-border" style={{ background: accentColor }} />
       <div className="card-body">
         <div className="card-header">
@@ -28,6 +49,9 @@ export default function CountdownCard({ event, onEdit, onDelete, onPin, onShare 
               <div className="card-name" title={event.name}>{event.name}</div>
               <div className="card-category" style={{ color: accentColor }}>
                 {event.category}
+                {event.recurring === 'yearly' && (
+                  <span className="recurring-badge" title="Repeats yearly"> 🔁</span>
+                )}
               </div>
             </div>
           </div>
@@ -48,6 +72,13 @@ export default function CountdownCard({ event, onEdit, onDelete, onPin, onShare 
             </button>
             <button
               className="card-action-btn"
+              onClick={() => onEmbed?.(event)}
+              title="Embed"
+            >
+              {'</>'}
+            </button>
+            <button
+              className="card-action-btn"
               onClick={() => onEdit(event)}
               title="Edit"
             >
@@ -62,6 +93,19 @@ export default function CountdownCard({ event, onEdit, onDelete, onPin, onShare 
             </button>
           </div>
         </div>
+
+        {milestone && (
+          <div
+            className="milestone-badge"
+            style={{
+              '--milestone-color': accentColor,
+              borderColor: accentColor,
+              color: accentColor,
+            }}
+          >
+            {milestone.emoji} {milestone.text}
+          </div>
+        )}
 
         {timeLeft.expired ? (
           <div className="expired-banner">

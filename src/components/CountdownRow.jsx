@@ -1,17 +1,29 @@
 import { useState, useEffect } from 'react';
-import { getTimeLeft, formatDate, getCategoryColor } from '../App';
+import { getTimeLeft, formatDate, getCategoryColor, getMilestone } from '../App';
 
-export default function CountdownRow({ event, onEdit, onDelete, onPin, onShare }) {
+export default function CountdownRow({
+  event, onEdit, onDelete, onPin, onShare, onEmbed, onConfetti,
+  onDragStart, onDragEnter, onDragEnd,
+}) {
   const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(event.date));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft(getTimeLeft(event.date));
+      const tl = getTimeLeft(event.date);
+      setTimeLeft(tl);
+      if (tl.expired) onConfetti?.(event.id);
     }, 1000);
     return () => clearInterval(interval);
-  }, [event.date]);
+  }, [event.date, event.id, onConfetti]);
+
+  useEffect(() => {
+    const tl = getTimeLeft(event.date);
+    if (tl.expired) onConfetti?.(event.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const accentColor = event.color || getCategoryColor(event.category);
+  const milestone = getMilestone(timeLeft);
 
   function pad(n) {
     return String(n).padStart(2, '0');
@@ -19,8 +31,13 @@ export default function CountdownRow({ event, onEdit, onDelete, onPin, onShare }
 
   return (
     <div
-      className="countdown-row"
+      className={`countdown-row row-theme-${event.category.toLowerCase()}`}
       style={{ '--row-accent': accentColor }}
+      draggable
+      onDragStart={() => onDragStart?.(event.id)}
+      onDragEnter={() => onDragEnter?.(event.id)}
+      onDragEnd={onDragEnd}
+      onDragOver={e => e.preventDefault()}
     >
       <div
         style={{
@@ -37,13 +54,26 @@ export default function CountdownRow({ event, onEdit, onDelete, onPin, onShare }
       <span className="row-icon">{event.icon}</span>
 
       <div className="row-info">
-        <div className="row-name" title={event.name}>{event.name}</div>
+        <div className="row-name" title={event.name}>
+          {event.name}
+          {event.recurring === 'yearly' && (
+            <span className="recurring-badge" title="Repeats yearly"> 🔁</span>
+          )}
+        </div>
         <div className="row-meta">
           <span className="row-meta-cat" style={{ color: accentColor }}>
             {event.category}
           </span>
           <span>·</span>
           <span>{formatDate(event.date)}</span>
+          {milestone && (
+            <span
+              className="milestone-badge milestone-badge--inline"
+              style={{ '--milestone-color': accentColor, borderColor: accentColor, color: accentColor }}
+            >
+              {milestone.emoji} {milestone.text}
+            </span>
+          )}
         </div>
       </div>
 
@@ -90,6 +120,13 @@ export default function CountdownRow({ event, onEdit, onDelete, onPin, onShare }
           title="Share"
         >
           ↗
+        </button>
+        <button
+          className="row-action-btn"
+          onClick={() => onEmbed?.(event)}
+          title="Embed"
+        >
+          {'</>'}
         </button>
         <button
           className="row-action-btn"

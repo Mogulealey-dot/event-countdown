@@ -28,6 +28,12 @@ export default function CreateModal({ event, onSave, onClose }) {
   const [icon, setIcon] = useState(event?.icon || '🎉');
   const [color, setColor] = useState(event?.color || '#7c6af7');
   const [customEmoji, setCustomEmoji] = useState('');
+  const [recurring, setRecurring] = useState(event?.recurring || 'none');
+
+  // Reminder state
+  const [remindEnabled, setRemindEnabled] = useState(!!(event?.reminder));
+  const [reminderPreset, setReminderPreset] = useState(event?.reminder?.preset || '1day');
+  const [reminderCustomDays, setReminderCustomDays] = useState(event?.reminder?.days || '');
 
   // Auto-set color when category changes
   useEffect(() => {
@@ -49,12 +55,26 @@ export default function CreateModal({ event, onSave, onClose }) {
     e.preventDefault();
     if (!name.trim() || !date) return;
 
+    let reminder = null;
+    if (remindEnabled) {
+      if (reminderPreset === 'custom') {
+        const days = parseInt(reminderCustomDays, 10);
+        if (!isNaN(days) && days > 0) {
+          reminder = { preset: 'custom', days };
+        }
+      } else {
+        reminder = { preset: reminderPreset, days: null };
+      }
+    }
+
     const eventData = {
       name: name.trim(),
       date: new Date(date).toISOString(),
       category,
       icon,
       color,
+      recurring,
+      reminder,
     };
 
     onSave(eventData);
@@ -69,7 +89,6 @@ export default function CreateModal({ event, onSave, onClose }) {
     const val = e.target.value;
     setCustomEmoji(val);
     if (val.trim()) {
-      // Get the first "grapheme" (emoji character)
       const chars = [...val.trim()];
       if (chars.length > 0) setIcon(chars[0]);
     }
@@ -173,6 +192,92 @@ export default function CreateModal({ event, onSave, onClose }) {
                 />
               ))}
             </div>
+          </div>
+
+          {/* Recurring toggle */}
+          <div className="form-group">
+            <div className="toggle-row">
+              <div className="toggle-info">
+                <div className="toggle-label">Repeat yearly</div>
+                <div className="toggle-sub">Auto-advance date by 1 year when the event passes</div>
+              </div>
+              <button
+                type="button"
+                className={`toggle-btn${recurring === 'yearly' ? ' on' : ''}`}
+                onClick={() => setRecurring(r => r === 'yearly' ? 'none' : 'yearly')}
+                aria-pressed={recurring === 'yearly'}
+              >
+                <span className="toggle-knob" />
+              </button>
+            </div>
+          </div>
+
+          {/* Reminder */}
+          <div className="form-group">
+            <div className="toggle-row">
+              <div className="toggle-info">
+                <div className="toggle-label">Remind me</div>
+                <div className="toggle-sub">Get a browser notification before this event</div>
+              </div>
+              <button
+                type="button"
+                className={`toggle-btn${remindEnabled ? ' on' : ''}`}
+                onClick={() => setRemindEnabled(v => !v)}
+                aria-pressed={remindEnabled}
+              >
+                <span className="toggle-knob" />
+              </button>
+            </div>
+
+            {remindEnabled && (
+              <div className="reminder-options">
+                <label className="reminder-option">
+                  <input
+                    type="radio"
+                    name="reminderPreset"
+                    value="1day"
+                    checked={reminderPreset === '1day'}
+                    onChange={() => setReminderPreset('1day')}
+                  />
+                  <span>1 day before</span>
+                </label>
+                <label className="reminder-option">
+                  <input
+                    type="radio"
+                    name="reminderPreset"
+                    value="1week"
+                    checked={reminderPreset === '1week'}
+                    onChange={() => setReminderPreset('1week')}
+                  />
+                  <span>1 week before</span>
+                </label>
+                <label className="reminder-option">
+                  <input
+                    type="radio"
+                    name="reminderPreset"
+                    value="custom"
+                    checked={reminderPreset === 'custom'}
+                    onChange={() => setReminderPreset('custom')}
+                  />
+                  <span>Custom</span>
+                </label>
+                {reminderPreset === 'custom' && (
+                  <div className="reminder-custom">
+                    <input
+                      className="form-input"
+                      type="number"
+                      min="1"
+                      max="365"
+                      placeholder="Days before"
+                      value={reminderCustomDays}
+                      onChange={e => setReminderCustomDays(e.target.value)}
+                      style={{ width: 140 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>days before</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="modal-actions">
